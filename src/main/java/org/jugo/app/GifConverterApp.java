@@ -32,6 +32,8 @@ public class GifConverterApp extends Application {
     private Double frameRate;
     private Integer width;
     private Integer height;
+    private File lastInputSelectDirectory;
+    private File lastOutputSelectDirectory;
 
     public static void main(String[] args) {
         launch(args);
@@ -50,6 +52,7 @@ public class GifConverterApp extends Application {
         // 输出位置
         Label outputPathLabel = new Label("Output Path:");
         Button outputPathButton = new Button("Browse");
+        outputPathButton.setDisable(true);
         TextField outputPathField = new TextField();
         outputPathField.setDisable(true);
         outputPathField.setPromptText("Output Path");
@@ -92,15 +95,20 @@ public class GifConverterApp extends Application {
         });
         selectVideoButton.setOnAction(e -> {
             FileChooser fileChooser = new FileChooser();
+            if (lastInputSelectDirectory != null) {
+                fileChooser.setInitialDirectory(lastInputSelectDirectory);
+            }
             FileChooser.ExtensionFilter videoFilter = new FileChooser.ExtensionFilter("video file", "*.mp4", "*.avi", "*.flv", "*.mkv");
             fileChooser.getExtensionFilters().add(videoFilter);
             File selectedFile = fileChooser.showOpenDialog(primaryStage);
-            // 禁用主布局下的其他控件
-            maskLayer.setVisible(true);
-            mainLayout.setDisable(true);
             // 启用新线程处理业务
             new Thread(() -> {
                 if (selectedFile != null) {
+                    Platform.runLater(() -> { // 禁用主布局下的其他控件
+                        maskLayer.setVisible(true);
+                        mainLayout.setDisable(true);
+                    });
+                    lastInputSelectDirectory = new File(selectedFile.getParent());
                     // 检查文件大小是否超过8MB
                     long fileSizeInBytes = selectedFile.length();
                     long maxSizeInBytes = 8 * 1024 * 1024;
@@ -144,6 +152,7 @@ public class GifConverterApp extends Application {
                             });
                         }
                         Platform.runLater(() -> {
+                            outputPathButton.setDisable(false);
                             outputPathField.setDisable(false);
                             maskLayer.setVisible(false);
                             mainLayout.setDisable(false);
@@ -163,8 +172,14 @@ public class GifConverterApp extends Application {
         // 输出目录按钮
         outputPathButton.setOnAction(e -> {
             DirectoryChooser directoryChooser = new DirectoryChooser();
+            if (lastOutputSelectDirectory != null) {
+                directoryChooser.setInitialDirectory(lastOutputSelectDirectory);
+            }
             File selectedDirectory = directoryChooser.showDialog(primaryStage);
             if (selectedDirectory != null) {
+                if (selectedDirectory != null) {
+                    lastOutputSelectDirectory = selectedDirectory;
+                }
                 String outputFolder = selectedDirectory.getAbsolutePath();
                 String fileNameWithOutExtension = Paths.get(inputFilePath).getFileName().toString().replaceFirst("[.][^.]+$", "");
                 outputPathField.setText(outputFolder + File.separator + fileNameWithOutExtension + ".gif");
